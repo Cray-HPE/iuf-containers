@@ -24,9 +24,6 @@
 name: iuf:v0.0.1
 on:
   push:
-    paths:
-      - .github/workflows/iuf.v0.0.1.yaml
-      - iuf/v0.0.1/**
   workflow_dispatch:
   schedule:
     - cron: '28 13 * * *'
@@ -37,14 +34,14 @@ jobs:
       contents: read
       id-token: write
     env:
-      DOCKER_REPO: artifactory.algol60.net/csm-docker/stable/iuf
+      DOCKER_REPO: artifactory.algol60.net/csm-docker/unstable/iuf
       DOCKER_TAG: v0.0.1
     steps:
       - name: build-sign-scan
         uses: Cray-HPE/github-actions/build-sign-scan@main
         with:
           # Only push on main builds
-          docker_push: ${{ github.ref == 'refs/heads/main' }}
+          docker_push: ${{ github.ref == 'refs/heads/CASMINST-5564' }}
           context_path: "."
           docker_repo: ${{ env.DOCKER_REPO }}
           docker_tag: ${{ env.DOCKER_TAG }}
