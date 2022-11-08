@@ -1,4 +1,5 @@
-FROM artifactory.algol60.net/csm-docker/unstable/cray-craycli:0.64.0-20221101213247_b8121f3
-FROM docker.io/portainer/kubectl-shell:latest-v1.21.1-amd64
-FROM quay.io/loftsman/loftsman-cli:1.2.0
-
+FROM opensuse/leap:15.3
+ADD https://artifactory.algol60.net/artifactory/csm-rpms/hpe/stable/sle-15sp3/craycli/x86_64/craycli-0.64.0-1.x86_64.rpm craycli-0.64.0-1.x86_64.rpm
+ADD https://artifactory.algol60.net/artifactory/csm-rpms/hpe/stable/sle-15sp2/loftsman-rpm/x86_64/loftsman-1.2.0-1.x86_64.rpm loftsman-1.2.0-1.x86_64.rpm
+RUN rpm -i craycli-0.64.0-1.x86_64.rpm && rpm -i loftsman-1.2.0-1.x86_64.rpm && zypper --non-interactive install git
+ENV  LC_ALL=C.UTF-8, LANG=C.UTF-8
