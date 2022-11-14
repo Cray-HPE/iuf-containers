@@ -21,7 +21,7 @@
 # ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 #
-name: iuf:v0.0.1
+name: iuf
 on:
   push:
   workflow_dispatch:
@@ -34,14 +34,14 @@ jobs:
       contents: read
       id-token: write
     env:
-      DOCKER_REPO: artifactory.algol60.net/csm-docker/unstable/iuf
+      DOCKER_REPO: artifactory.algol60.net/csm-docker/stable/iuf
       DOCKER_TAG: v0.0.1
     steps:
       - name: build-sign-scan
         uses: Cray-HPE/github-actions/build-sign-scan@main
         with:
           # Only push on main builds
-          docker_push: ${{ github.ref == 'refs/heads/CASMINST-5564' }}
+          docker_push: ${{ github.ref == 'refs/heads/main' }}
           context_path: "."
           docker_repo: ${{ env.DOCKER_REPO }}
           docker_tag: ${{ env.DOCKER_TAG }}
