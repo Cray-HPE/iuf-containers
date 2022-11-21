@@ -1,1 +1,4 @@
 This is container image created for IUF operations. The following tools are installed in this container image: manifestget, craycli, loftsman, git, and jq.
+
+When CONTRIBUTING, change the version in the `.version` file and change the version in `.github/workflows/iuf-container.yaml` DOCKER_TAG.
+These two versions should match.
