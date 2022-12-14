@@ -29,7 +29,7 @@
 set -eou pipefail
 
 usage(){
-    echo "Usage: $0 JSON_IUF_CONTENT_META"
+    echo "Usage: $0 JSON_IUF_CONTENT_META PARENT_PATH PRODUCT_NAME"
     echo "Uploads Loftsman manifest(s) from the location(s) specified within the product directory"
     exit 0 # Without error since the parameter may not have been included.
 }
@@ -47,20 +47,21 @@ process(){
     local manifest_path="$1"
     local use_manifestgen="$2"
     local manifest
+    local name
 
     if [[ -z "$manifest_path" ]]; then
-        echo "$0: path was not provided"
-        echo "Skipping the loftsman manifest upload operation"
+        echo "ERROR $0: path was not provided"
+        echo "ERROR Skipping the loftsman manifest upload operation"
         return 1
     fi
 
     if [[ -z "$use_manifestgen" ]]; then
-        echo "Found empty use_manifestgen parameter"
-        echo "Skipping the loftsman manifest upload operation for $manifest_path"
+        echo "ERROR Found empty use_manifestgen parameter"
+        echo "ERROR Skipping the loftsman manifest upload operation for $manifest_path"
         return 1
     elif [[ "${use_manifestgen,,}" == "null" ]]; then # jq will assign "null" is the element is missing
-        echo "It appears that the loftsman use_manifestgen parameter is missing."
-        echo "Skipping the loftsman manifest upload operation for $manifest_path"
+        echo "ERROR The loftsman use_manifestgen parameter is missing."
+        echo "ERROR Skipping the loftsman manifest upload operation for $manifest_path"
         return 1
     fi
 
@@ -68,50 +69,72 @@ process(){
     if [[ -d "$manifest_path" ]]; then
         for manifest in "$manifest_path"/*.yml "$manifest_path"/*.yaml; do
             if [[ "$use_manifestgen" = "true" ]] || [[ "$use_manifestgen" = "True" ]]; then
-                manifestgen -i $manifest -c $CUSTOMIZATIONS_YAML -o $manifest
+                cp $manifest /tmp/
+                name=/tmp/$(basename $manifest)
+                if ! manifestgen -i "$name" -c $CUSTOMIZATIONS_YAML -o $manifest; then
+                    echo "ERROR manifestgen failed"
+                    rm -f $name
+                    exit 1
+                fi
+                rm -f $name
             fi
-            cray artifacts create config-data argo/loftsman/$PRODUCT_NAME/manifests/$manifest $manifest
+            if ! cray artifacts create config-data argo/loftsman/$PRODUCT_NAME/manifests/"$(basename $manifest)" $manifest; then
+                echo "ERROR failed to create s3://config-data/ argo/loftsman/$PRODUCT_NAME/manifests/$(basename $manifest)"
+                exit 1
+            fi
         done
     # or is it a file?
     elif [[ -f "$manifest_path" ]]; then
         if [[ "$use_manifestgen" = "true" ]] || [[ "$use_manifestgen" = "True" ]]; then
-            manifestgen -i $manifest_path -c $CUSTOMIZATIONS_YAML -o $manifest_path
+            cp $manifest_path /tmp/
+            name=/tmp/"$(basename $manifest_path)"
+            if ! manifestgen -i $name -c $CUSTOMIZATIONS_YAML -o $manifest_path; then
+                echo "ERROR manifestgen failed"
+                rm -f $name
+                exit 1
+            fi
+            rm -f $name
         fi
-        cray artifacts create config-data argo/loftsman/$PRODUCT_NAME/manifests/"$manifest_path" "$manifest_path"
+        if ! cray artifacts create config-data argo/loftsman/$PRODUCT_NAME/manifests/"$(basename $manifest_path)" "$manifest_path"; then
+            echo "ERROR Error uploading to S3"
+            return 1
+        else
+            echo "NOTICE successfully created s3://config-data/argo/loftsman/$PRODUCT_NAME/manifests/$(basename $manifest_path)"
+            return 0
+        fi
     else
-        echo "$0: Invalid path \"$manifest_path\""
-        echo "Skipping the loftsman manifest upload operation for $manifest_path"
+        echo "ERROR $0: Invalid path \"$manifest_path\""
+        echo "ERROR Skipping the loftsman manifest upload operation for $manifest_path"
         return 1
     fi
-
-    return 0
 }
 
 # When called by Argo, this is the one expected argument with the content from
 # the manifest.
-if [[ $# -lt 2 ]]; then
-    echo "Did not find loftsman context and/or product name in the IUF manifest."
-    echo "Skipping this operation."
+if [[ $# -lt 3 ]]; then
+    echo "ERROR Did not receive the expected number of arguments."
+    echo "ERROR Skipping this operation."
     usage
 fi
 
 # Although the manifest data is yaml, it is passed in json format from Argo
 # in this context.
 JSON_CONTEXT="$1"
-PRODUCT_NAME="$2"
+PARENT_PATH="$2"
+PRODUCT_NAME="$3"
 LOFTSMAN_ENTRIES=$(echo "$JSON_CONTEXT" | jq '.content.loftsman | length')
 CUSTOMIZATIONS_YAML=/tmp/customizations.yaml
 
 if [[ -z "$LOFTSMAN_ENTRIES" ]]; then
-    echo "Did not receive any loftsman context."
-    exit 0
+    echo "ERROR Did not receive any loftsman context."
+    exit 1
 fi
 
 kubectl get secrets -n loftsman site-init -o jsonpath='{.data.customizations\.yaml}' | base64 -d > $CUSTOMIZATIONS_YAML
 
 err=0
 for (( i=0; i< LOFTSMAN_ENTRIES; i++ )); do
-    MANIFEST_PATH=$(echo "$JSON_CONTEXT" | jq -r '.content.loftsman['$i'].path')
+    MANIFEST_PATH="$PARENT_PATH"/$(echo "$JSON_CONTEXT" | jq -r '.content.loftsman['$i'].path')
     USE_MANIFESTGEN=$(echo "$JSON_CONTEXT" | jq -r '.content.loftsman['$i'].use_manifestgen')
     echo "Processing manifest(s) at the following path: $MANIFEST_PATH (use_manifestgen=$USE_MANIFESTGEN)"
     # Attempt to process all of the loftsman manifest content. Exit at the end with non-zero if any

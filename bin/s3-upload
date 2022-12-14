@@ -27,7 +27,7 @@
 # shellcheck disable=SC2086
 
 usage(){
-    echo "Usage: $0 JSON_IUF_CONTENT_META"
+    echo "Usage: $0 JSON_IUF_CONTENT_META PARENT_PATH"
     echo "Uploads S3 image(s) from the location(s) specified within the product directory"
     exit 0 # Without error since the parameter may not have been included.
 }
@@ -49,68 +49,71 @@ process(){
     local key="$3"
 
     if [[ ! -f "$local_path" ]]; then
-        echo "$0: Invalid path $local_path"
-        echo "Skipping the S3 upload operation for $local_path"
+        echo "ERROR $0: Invalid path $local_path"
+        echo "ERROR Skipping the S3 upload operation for $local_path"
         return 1
     fi
     # test -f with no arguments exits with 0. Also verify the var isn't empty.
     if [[ -z "$local_path" ]]; then
-        echo "$0: path was not provided"
-        echo "Skipping the S3 upload operation (bucket: $bucket, key: $key)"
+        echo "ERROR $0: path was not provided"
+        echo "ERROR Skipping the S3 upload operation (bucket: $bucket, key: $key)"
         return 1
     fi
 
     if [[ -z "$bucket" ]]; then
-        echo "Found empty S3 bucket parameter"
-        echo "Skipping the S3 upload operation for $local_path"
+        echo "ERROR Found empty S3 bucket parameter"
+        echo "ERROR Skipping the S3 upload operation for $local_path"
         return 1
     elif [[ "${bucket,,}" == "null" ]]; then # jq will assign "null" is the element is missing
-        echo "It appears that the S3 bucket parameter is missing."
-        echo "Skipping the S3 upload operation for $local_path"
+        echo "ERROR Missing S3 bucket parameter"
+        echo "ERROR Skipping the S3 upload operation for $local_path"
         return 1
     fi
 
     if [[ -z "$key" ]]; then
-        echo "Found empty S3 key parameter"
-        echo "Skipping the S3 upload operation for $local_path"
+        echo "ERROR Found empty S3 key parameter"
+        echo "ERROR Skipping the S3 upload operation for $local_path"
         return 1
     elif [[ "${key,,}" == "null" ]]; then # jq will assign "null" is the element is missing
-        echo "It appears that the S3 key parameter is missing."
-        echo "Skipping the S3 upload operation for $local_path"
+        echo "ERROR The S3 'key' parameter is missing."
+        echo "ERROR Skipping the S3 upload operation for $local_path"
         return 1
     fi
 
     if ! cray artifacts create $bucket $key $local_path; then
-        echo "Error uploading to S3"
+        echo "ERROR Error uploading to S3"
         return 1
+    else
+        echo "NOTICE successfully created s3://$bucket/$key"
+        return 0
     fi
-
-    return 0
 }
 
 # When called by Argo, this is the one expected argument with the content from
 # the manifest.
-if [[ $# -eq 0 ]]; then
-    echo "Did not find S3 context in the IUF manifest."
-    echo "Skipping this operation."
+if [[ $# -lt 2 ]]; then
+    echo "ERROR Did not receive the expected number of arguments."
+    echo "ERROR Skipping this operation."
     usage
 fi
 
 # Although the manifest data is yaml, it is passed in json format from Argo
 # in this context.
 JSON_CONTEXT="$1"
+PARENT_PATH="$2"
 S3_ENTRIES=$(echo "$JSON_CONTEXT" | jq '.content.s3 | length')
+
 if [[ -z "$S3_ENTRIES" ]]; then
-    echo "Did not receive any S3 context."
-    exit 0
+    echo "ERROR Did not receive any S3 context."
+    exit 1
 fi
 
 err=0
 for (( i=0; i< S3_ENTRIES; i++ )); do
-    LOCAL_PATH=$(echo "$JSON_CONTEXT" | jq -r '.content.s3['$i'].path')
+    LOCAL_PATH="$PARENT_PATH"/$(echo "$JSON_CONTEXT" | jq -r '.content.s3['$i'].path')
     S3_BUCKET=$(echo "$JSON_CONTEXT" | jq -r '.content.s3['$i'].bucket')
     S3_KEY=$(echo "$JSON_CONTEXT" | jq -r '.content.s3['$i'].key')
-    echo "Processing file at $LOCAL_PATH (s3_bucket=$S3_BUCKET s3_key=$S3_KEY)"
+    echo "NOTICE Processing file at $LOCAL_PATH (s3_bucket=$S3_BUCKET s3_key=$S3_KEY)"
     # Attempt to process all of the s3 content. Exit at the end with non-zero if any
     # errors are detected. The Argo log will therefore have all errors associated with
     # this operation for review.
