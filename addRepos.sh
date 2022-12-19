@@ -12,5 +12,5 @@ curl -u "${ARTIFACTORY_USERNAME}:${ARTIFACTPRY_PASSWORD}" https://artifactory.al
 rpm -i craycli-0.64.0-1.x86_64.rpm
 rpm -i loftsman-1.2.0-1.x86_64.rpm
 rpm -i manifestgen-1.3.7-1.x86_64.rpm
-zypper --non-interactive install git
-zypper --non-interactive install jq
+#zypper --non-interactive install git
+#zypper --non-interactive install jq
