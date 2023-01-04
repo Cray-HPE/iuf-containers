@@ -78,8 +78,8 @@ process(){
                 fi
                 rm -f $name
             fi
-            if ! cray artifacts create config-data argo/loftsman/$PRODUCT_NAME/manifests/"$(basename $manifest)" $manifest; then
-                echo "ERROR failed to create s3://config-data/ argo/loftsman/$PRODUCT_NAME/manifests/$(basename $manifest)"
+            if ! cray artifacts create config-data argo/loftsman/$PRODUCT_NAME/$PRODUCT_VERSION/manifests/"$(basename $manifest)" $manifest; then
+                echo "ERROR failed to create s3://config-data/argo/loftsman/$PRODUCT_NAME/$PRODUCT_VERSION/manifests/$(basename $manifest)"
                 exit 1
             fi
         done
@@ -95,11 +95,11 @@ process(){
             fi
             rm -f $name
         fi
-        if ! cray artifacts create config-data argo/loftsman/$PRODUCT_NAME/manifests/"$(basename $manifest_path)" "$manifest_path"; then
+        if ! cray artifacts create config-data argo/loftsman/$PRODUCT_NAME/$PRODUCT_VERSION/manifests/"$(basename $manifest_path)" "$manifest_path"; then
             echo "ERROR Error uploading to S3"
             return 1
         else
-            echo "NOTICE successfully created s3://config-data/argo/loftsman/$PRODUCT_NAME/manifests/$(basename $manifest_path)"
+            echo "NOTICE successfully created s3://config-data/argo/loftsman/$PRODUCT_NAME/$PRODUCT_VERSION/manifests/$(basename $manifest_path)"
             return 0
         fi
     else
@@ -127,6 +127,12 @@ CUSTOMIZATIONS_YAML=/tmp/customizations.yaml
 
 if [[ -z "$LOFTSMAN_ENTRIES" ]]; then
     echo "ERROR Did not receive any loftsman context."
+    exit 1
+fi
+
+PRODUCT_VERSION=$(echo "$JSON_CONTEXT" | jq -r '.version')
+if [[ "${PRODUCT_VERSION,,}" == "null" ]] || [[ -z "$PRODUCT_VERSION" ]]; then
+    echo "ERROR product version not found in manifest"
     exit 1
 fi
 
