@@ -47,6 +47,7 @@ process(){
     local manifest_path="$1"
     local use_manifestgen="$2"
     local manifest
+    local manifest_files
     local name
 
     if [[ -z "$manifest_path" ]]; then
@@ -67,7 +68,8 @@ process(){
 
     # Is $manifest_path a directory?
     if [[ -d "$manifest_path" ]]; then
-        for manifest in "$manifest_path"/*.yml "$manifest_path"/*.yaml; do
+        manifest_files=$(ls "$manifest_path"/*.yml "$manifest_path"/*.yaml 2>/dev/null)
+        for manifest in $manifest_files; do
             if [[ "$use_manifestgen" = "true" ]] || [[ "$use_manifestgen" = "True" ]]; then
                 cp $manifest /tmp/
                 name=/tmp/$(basename $manifest)
@@ -81,6 +83,8 @@ process(){
             if ! cray artifacts create config-data argo/loftsman/$PRODUCT_NAME/$PRODUCT_VERSION/manifests/"$(basename $manifest)" $manifest; then
                 echo "ERROR failed to create s3://config-data/argo/loftsman/$PRODUCT_NAME/$PRODUCT_VERSION/manifests/$(basename $manifest)"
                 exit 1
+            else
+                echo "NOTICE successfully created s3://config-data/argo/loftsman/$PRODUCT_NAME/$PRODUCT_VERSION/manifests/$(basename $manifest)"
             fi
         done
     # or is it a file?
