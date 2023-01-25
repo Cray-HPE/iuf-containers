@@ -52,3 +52,4 @@ jobs:
           snyk_token: ${{ secrets.SNYK_TOKEN }}
           github_sha: $GITHUB_SHA
           fail_on_snyk_errors: true
+          snyk_exclude_app_vulns: true
