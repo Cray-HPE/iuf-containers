@@ -2,7 +2,7 @@
 #
 # MIT License
 #
-# (C) Copyright 2022 Hewlett Packard Enterprise Development LP
+# (C) Copyright 2022-2023 Hewlett Packard Enterprise Development LP
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -32,6 +32,21 @@ usage(){
     echo "Usage: $0 JSON_IUF_CONTENT_META PARENT_PATH PRODUCT_NAME"
     echo "Uploads Loftsman manifest(s) from the location(s) specified within the product directory"
     exit 0 # Without error since the parameter may not have been included.
+}
+
+# usage: write_output OUTPUT
+#
+# Writes output to the output file specified in the environment variable
+# SCRIPT_OUTPUT_FILE.
+write_output(){
+    local output="$1"
+        # Write the output file
+    if [[ -n "$SCRIPT_OUTPUT_FILE" ]]; then
+        echo "NOTICE Writing product catalog data to output file: $SCRIPT_OUTPUT_FILE"
+        echo "$1" > $SCRIPT_OUTPUT_FILE
+    else
+        echo "WARNING SCRIPT_OUTPUT_FILE environment variable was null."
+    fi
 }
 
 # usage: process MANIFEST_PATH USE_MANIFESTGEN
@@ -80,11 +95,15 @@ process(){
                 fi
                 rm -f $name
             fi
-            if ! cray artifacts create config-data argo/loftsman/$PRODUCT_NAME/$PRODUCT_VERSION/manifests/"$(basename $manifest)" $manifest; then
-                echo "ERROR failed to create s3://config-data/argo/loftsman/$PRODUCT_NAME/$PRODUCT_VERSION/manifests/$(basename $manifest)"
+            manifest_name="$(basename $manifest)"
+            s3_manifest_key="argo/loftsman/$PRODUCT_NAME/$PRODUCT_VERSION/manifests/$manifest_name"
+            s3_manifest_path="config-data/$s3_manifest_key"
+            if ! cray artifacts create config-data $s3_manifest_key $manifest; then
+                echo "ERROR failed to create s3://$s3_manifest_path"
                 exit 1
             else
-                echo "NOTICE successfully created s3://config-data/argo/loftsman/$PRODUCT_NAME/$PRODUCT_VERSION/manifests/$(basename $manifest)"
+                echo "NOTICE successfully created s3://$s3_manifest_path"
+                CATALOG_UPDATE=$(echo "$CATALOG_UPDATE" | jq ".component_version.manifests += [\"$s3_manifest_path\"]");
             fi
         done
     # or is it a file?
@@ -99,19 +118,28 @@ process(){
             fi
             rm -f $name
         fi
-        if ! cray artifacts create config-data argo/loftsman/$PRODUCT_NAME/$PRODUCT_VERSION/manifests/"$(basename $manifest_path)" "$manifest_path"; then
-            echo "ERROR Error uploading to S3"
+        manifest_name="$(basename $manifest_path)"
+        s3_manifest_key="argo/loftsman/$PRODUCT_NAME/$PRODUCT_VERSION/manifests/$manifest_name"
+        s3_manifest_path="config-data/$s3_manifest_key"
+        if ! cray artifacts create config-data $s3_manifest_key $manifest_path; then
+            echo "ERROR Error uploading $manifest_name to S3"
             return 1
         else
-            echo "NOTICE successfully created s3://config-data/argo/loftsman/$PRODUCT_NAME/$PRODUCT_VERSION/manifests/$(basename $manifest_path)"
-            return 0
+            echo "NOTICE successfully created s3://$s3_manifest_path"
+            CATALOG_UPDATE=$(echo "$CATALOG_UPDATE" | jq ".component_version.manifests += [\"$s3_manifest_path\"]");
         fi
     else
         echo "ERROR $0: Invalid path \"$manifest_path\""
         echo "ERROR Skipping the loftsman manifest upload operation for $manifest_path"
         return 1
     fi
+
+    write_output "$CATALOG_UPDATE"
 }
+
+# Write an empty catalog entry in case errors cause us to abort.
+CATALOG_UPDATE='{"component_version": {"manifests": []}}'
+write_output "$CATALOG_UPDATE"
 
 # When called by Argo, this is the one expected argument with the content from
 # the manifest.

@@ -35,7 +35,7 @@ jobs:
       id-token: write
     env:
       DOCKER_REPO: artifactory.algol60.net/csm-docker/stable/iuf
-      DOCKER_TAG: v0.1.1
+      DOCKER_TAG: v0.1.2
     steps:
       - name: build-sign-scan
         uses: Cray-HPE/github-actions/build-sign-scan@main
