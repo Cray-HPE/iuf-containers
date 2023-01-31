@@ -34,14 +34,14 @@ jobs:
       contents: read
       id-token: write
     env:
-      DOCKER_REPO: artifactory.algol60.net/csm-docker/stable/iuf
-      DOCKER_TAG: v0.1.2
+      DOCKER_REPO: artifactory.algol60.net/csm-docker/unstable/iuf
+      DOCKER_TAG: v0.1.2-jasons
     steps:
       - name: build-sign-scan
         uses: Cray-HPE/github-actions/build-sign-scan@main
         with:
           # Only push on main builds
-          docker_push: ${{ github.ref == 'refs/heads/main' }}
+          docker_push: true
           context_path: "."
           docker_repo: ${{ env.DOCKER_REPO }}
           docker_tag: ${{ env.DOCKER_TAG }}
