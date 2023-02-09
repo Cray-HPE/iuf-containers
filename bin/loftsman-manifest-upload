@@ -103,7 +103,7 @@ process(){
                 exit 1
             else
                 echo "NOTICE successfully created s3://$s3_manifest_path"
-                CATALOG_UPDATE=$(echo "$CATALOG_UPDATE" | jq ".component_version.manifests += [\"$s3_manifest_path\"]");
+                CATALOG_UPDATE=$(echo "$CATALOG_UPDATE" | jq ".component_versions.manifests += [\"$s3_manifest_path\"]");
             fi
         done
     # or is it a file?
@@ -126,7 +126,7 @@ process(){
             return 1
         else
             echo "NOTICE successfully created s3://$s3_manifest_path"
-            CATALOG_UPDATE=$(echo "$CATALOG_UPDATE" | jq ".component_version.manifests += [\"$s3_manifest_path\"]");
+            CATALOG_UPDATE=$(echo "$CATALOG_UPDATE" | jq ".component_versions.manifests += [\"$s3_manifest_path\"]");
         fi
     else
         echo "ERROR $0: Invalid path \"$manifest_path\""
@@ -138,7 +138,7 @@ process(){
 }
 
 # Write an empty catalog entry in case errors cause us to abort.
-CATALOG_UPDATE='{"component_version": {"manifests": []}}'
+CATALOG_UPDATE='{"component_versions": {"manifests": []}}'
 write_output "$CATALOG_UPDATE"
 
 # When called by Argo, this is the one expected argument with the content from
