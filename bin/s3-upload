@@ -49,13 +49,13 @@ process(){
     local key="$3"
 
     if [[ ! -f "$local_path" ]]; then
-        echo "ERROR $0: Invalid path $local_path"
+        echo "ERROR $0: Invalid path $local_path provided in the manifest"
         echo "ERROR Skipping the S3 upload operation for $local_path"
         return 1
     fi
     # test -f with no arguments exits with 0. Also verify the var isn't empty.
     if [[ -z "$local_path" ]]; then
-        echo "ERROR $0: path was not provided"
+        echo "ERROR $0: Local path of the object to be uploaded was empty"
         echo "ERROR Skipping the S3 upload operation (bucket: $bucket, key: $key)"
         return 1
     fi
@@ -75,16 +75,19 @@ process(){
         echo "ERROR Skipping the S3 upload operation for $local_path"
         return 1
     elif [[ "${key,,}" == "null" ]]; then # jq will assign "null" is the element is missing
-        echo "ERROR The S3 'key' parameter is missing."
+        echo "ERROR The S3 'key' parameter is missing"
         echo "ERROR Skipping the S3 upload operation for $local_path"
         return 1
     fi
 
-    if ! cray artifacts create $bucket $key $local_path; then
+    result=$(cray artifacts create $bucket $key $local_path 2>&1)
+    if [ $? -ne 0 ]; then
         echo "ERROR Error uploading to S3"
+        result=$(echo "$result" | sed -e 's/^/DEBUG /')
+        echo -e "DEBUG <cray artifacts create $bucket $key $local_path> failed with\n\n$result"
         return 1
     else
-        echo "NOTICE successfully created s3://$bucket/$key"
+        echo "NOTICE Successfully created s3://$bucket/$key"
         return 0
     fi
 }
@@ -92,8 +95,8 @@ process(){
 # When called by Argo, this is the one expected argument with the content from
 # the manifest.
 if [[ $# -lt 2 ]]; then
-    echo "ERROR Did not receive the expected number of arguments."
-    echo "ERROR Skipping this operation."
+    echo "ERROR Did not receive the expected number of arguments. The arguments expected are - 1.JSON_IUF_CONTENT_META 2.PARENT_PATH"
+    echo "ERROR Skipping S3-upload operation"
     usage
 fi
 
@@ -104,7 +107,7 @@ PARENT_PATH="$2"
 S3_ENTRIES=$(echo "$JSON_CONTEXT" | jq '.content.s3 | length')
 
 if [[ -z "$S3_ENTRIES" ]]; then
-    echo "ERROR Did not receive any S3 context."
+    echo "ERROR Did not receive any S3 context in the manifest provided"
     exit 1
 fi
 
@@ -113,7 +116,7 @@ for (( i=0; i< S3_ENTRIES; i++ )); do
     LOCAL_PATH="$PARENT_PATH"/$(echo "$JSON_CONTEXT" | jq -r '.content.s3['$i'].path')
     S3_BUCKET=$(echo "$JSON_CONTEXT" | jq -r '.content.s3['$i'].bucket')
     S3_KEY=$(echo "$JSON_CONTEXT" | jq -r '.content.s3['$i'].key')
-    echo "NOTICE Processing file at $LOCAL_PATH (s3_bucket=$S3_BUCKET s3_key=$S3_KEY)"
+    echo "NOTICE Processing file at $LOCAL_PATH (S3_bucket=$S3_BUCKET S3_key=$S3_KEY)"
     # Attempt to process all of the s3 content. Exit at the end with non-zero if any
     # errors are detected. The Argo log will therefore have all errors associated with
     # this operation for review.

@@ -45,7 +45,7 @@ write_output(){
         echo "NOTICE Writing product catalog data to output file: $SCRIPT_OUTPUT_FILE"
         echo "$1" > $SCRIPT_OUTPUT_FILE
     else
-        echo "WARNING SCRIPT_OUTPUT_FILE environment variable was null."
+        echo "WARNING SCRIPT_OUTPUT_FILE environment variable which is supposed to have the filename to write the product catalog data was null"
     fi
 }
 
@@ -66,7 +66,7 @@ process(){
     local name
 
     if [[ -z "$manifest_path" ]]; then
-        echo "ERROR $0: path was not provided"
+        echo "ERROR $0: Manifest path was not provided"
         echo "ERROR Skipping the loftsman manifest upload operation"
         return 1
     fi
@@ -76,7 +76,7 @@ process(){
         echo "ERROR Skipping the loftsman manifest upload operation for $manifest_path"
         return 1
     elif [[ "${use_manifestgen,,}" == "null" ]]; then # jq will assign "null" is the element is missing
-        echo "ERROR The loftsman use_manifestgen parameter is missing."
+        echo "ERROR The loftsman use_manifestgen parameter is missing"
         echo "ERROR Skipping the loftsman manifest upload operation for $manifest_path"
         return 1
     fi
@@ -84,56 +84,43 @@ process(){
     # Is $manifest_path a directory?
     if [[ -d "$manifest_path" ]]; then
         manifest_files=$(ls "$manifest_path"/*.yml "$manifest_path"/*.yaml 2>/dev/null)
-        for manifest in $manifest_files; do
-            if [[ "$use_manifestgen" = "true" ]] || [[ "$use_manifestgen" = "True" ]]; then
-                cp $manifest /tmp/
-                name=/tmp/$(basename $manifest)
-                if ! manifestgen -i "$name" -c $CUSTOMIZATIONS_YAML -o $manifest; then
-                    echo "ERROR manifestgen failed"
-                    rm -f $name
-                    exit 1
-                fi
-                rm -f $name
-            fi
-            manifest_name="$(basename $manifest)"
-            s3_manifest_key="argo/loftsman/$PRODUCT_NAME/$PRODUCT_VERSION/manifests/$manifest_name"
-            s3_manifest_path="config-data/$s3_manifest_key"
-            if ! cray artifacts create config-data $s3_manifest_key $manifest; then
-                echo "ERROR failed to create s3://$s3_manifest_path"
-                exit 1
-            else
-                echo "NOTICE successfully created s3://$s3_manifest_path"
-                CATALOG_UPDATE=$(echo "$CATALOG_UPDATE" | jq ".component_versions.manifests += [\"$s3_manifest_path\"]");
-            fi
-        done
-    # or is it a file?
     elif [[ -f "$manifest_path" ]]; then
-        if [[ "$use_manifestgen" = "true" ]] || [[ "$use_manifestgen" = "True" ]]; then
-            cp $manifest_path /tmp/
-            name=/tmp/"$(basename $manifest_path)"
-            if ! manifestgen -i $name -c $CUSTOMIZATIONS_YAML -o $manifest_path; then
-                echo "ERROR manifestgen failed"
-                rm -f $name
-                exit 1
-            fi
-            rm -f $name
-        fi
-        manifest_name="$(basename $manifest_path)"
-        s3_manifest_key="argo/loftsman/$PRODUCT_NAME/$PRODUCT_VERSION/manifests/$manifest_name"
-        s3_manifest_path="config-data/$s3_manifest_key"
-        if ! cray artifacts create config-data $s3_manifest_key $manifest_path; then
-            echo "ERROR Error uploading $manifest_name to S3"
-            return 1
-        else
-            echo "NOTICE successfully created s3://$s3_manifest_path"
-            CATALOG_UPDATE=$(echo "$CATALOG_UPDATE" | jq ".component_versions.manifests += [\"$s3_manifest_path\"]");
-        fi
+        manifest_files=$manifest_path
     else
         echo "ERROR $0: Invalid path \"$manifest_path\""
         echo "ERROR Skipping the loftsman manifest upload operation for $manifest_path"
         return 1
     fi
 
+    for manifest in $manifest_files; do
+        if [[ "$use_manifestgen" = "true" ]] || [[ "$use_manifestgen" = "True" ]]; then
+            cp $manifest /tmp/
+            name=/tmp/$(basename $manifest)
+            echo "DEBUG Performing manifestgen for $manifest"
+            result=$(manifestgen -i "$name" -c $CUSTOMIZATIONS_YAML -o $manifest 2>&1)
+            if [ $? -ne 0 ]; then
+                echo "ERROR manifestgen failed for $manifest"
+                result=$(echo "$result" | sed -e 's/^/DEBUG /')
+                echo -e "DEBUG <manifestgen -i $name -c $CUSTOMIZATIONS_YAML -o $manifest> failed with\n\n$result"
+                rm -f $name
+                exit 1
+            fi
+            rm -f $name
+        fi
+        manifest_name="$(basename $manifest)"
+        s3_manifest_key="argo/loftsman/$PRODUCT_NAME/$PRODUCT_VERSION/manifests/$manifest_name"
+        s3_manifest_path="config-data/$s3_manifest_key"
+        result=$(cray artifacts create config-data $s3_manifest_key $manifest 2>&1)
+        if [ $? -ne 0 ]; then
+            echo "ERROR Failed to create s3://$s3_manifest_path"
+            result=$(echo "$result" | sed -e 's/^/DEBUG /')
+            echo -e "DEBUG <cray artifacts create config-data $s3_manifest_key $manifest> failed with\n\n$result"
+            exit 1
+        else
+            echo "NOTICE Successfully created s3://$s3_manifest_path"
+            CATALOG_UPDATE=$(echo "$CATALOG_UPDATE" | jq ".component_versions.manifests += [\"$s3_manifest_path\"]");
+        fi
+    done
     write_output "$CATALOG_UPDATE"
 }
 
@@ -144,8 +131,8 @@ write_output "$CATALOG_UPDATE"
 # When called by Argo, this is the one expected argument with the content from
 # the manifest.
 if [[ $# -lt 3 ]]; then
-    echo "ERROR Did not receive the expected number of arguments."
-    echo "ERROR Skipping this operation."
+    echo "ERROR Did not receive the expected number of arguments. The arguments expected are - 1.JSON_IUF_CONTENT_META 2.PARENT_PATH 3.PRODUCT_NAME"
+    echo "ERROR Skipping loftsman-manifest-upload operation"
     usage
 fi
 
@@ -158,13 +145,13 @@ LOFTSMAN_ENTRIES=$(echo "$JSON_CONTEXT" | jq '.content.loftsman | length')
 CUSTOMIZATIONS_YAML=/tmp/customizations.yaml
 
 if [[ -z "$LOFTSMAN_ENTRIES" ]]; then
-    echo "ERROR Did not receive any loftsman context."
+    echo "ERROR Did not receive any loftsman context in the manifest provided"
     exit 1
 fi
 
 PRODUCT_VERSION=$(echo "$JSON_CONTEXT" | jq -r '.version')
 if [[ "${PRODUCT_VERSION,,}" == "null" ]] || [[ -z "$PRODUCT_VERSION" ]]; then
-    echo "ERROR product version not found in manifest"
+    echo "ERROR Product version not found in manifest provided"
     exit 1
 fi
 
