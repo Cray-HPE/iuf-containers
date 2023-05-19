@@ -25,8 +25,6 @@ name: build-sign-scan
 on:
   push:
   workflow_dispatch:
-  schedule:
-    - cron: '28 13 * * *'
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -45,6 +43,9 @@ jobs:
           context_path: "."
           docker_repo: ${{ env.DOCKER_REPO }}
           docker_tag: ${{ env.DOCKER_TAG }}
+          docker_secrets: |
+            SLES_REPO_USERNAME=${{ secrets.ARTIFACTORY_ALGOL60_READONLY_USERNAME }}
+            SLES_REPO_PASSWORD=${{ secrets.ARTIFACTORY_ALGOL60_READONLY_TOKEN }}
           artifactory_algol60_token: ${{ secrets.ARTIFACTORY_ALGOL60_TOKEN }}
           cosign_gcp_workload_identity_provider: ${{ secrets.COSIGN_GCP_WORKLOAD_IDENTITY_PROVIDER }}
           cosign_gcp_service_account: ${{ secrets.COSIGN_GCP_SERVICE_ACCOUNT }}
