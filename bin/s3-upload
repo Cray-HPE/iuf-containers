@@ -87,7 +87,7 @@ process(){
         echo -e "DEBUG <cray artifacts create $bucket $key $local_path> failed with\n\n$result"
         return 1
     else
-        echo "NOTICE Successfully created s3://$bucket/$key"
+        echo "INFO Successfully created s3://$bucket/$key for $local_path"
         return 0
     fi
 }
@@ -116,7 +116,7 @@ for (( i=0; i< S3_ENTRIES; i++ )); do
     LOCAL_PATH="$PARENT_PATH"/$(echo "$JSON_CONTEXT" | jq -r '.content.s3['$i'].path')
     S3_BUCKET=$(echo "$JSON_CONTEXT" | jq -r '.content.s3['$i'].bucket')
     S3_KEY=$(echo "$JSON_CONTEXT" | jq -r '.content.s3['$i'].key')
-    echo "INFO Processing file at $LOCAL_PATH (s3_bucket=$S3_BUCKET s3_key=$S3_KEY)"
+    echo "DEBUG Processing file at $LOCAL_PATH (s3_bucket=$S3_BUCKET s3_key=$S3_KEY)"
     # Attempt to process all of the s3 content. Exit at the end with non-zero if any
     # errors are detected. The Argo log will therefore have all errors associated with
     # this operation for review.

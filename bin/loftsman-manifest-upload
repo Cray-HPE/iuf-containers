@@ -117,7 +117,7 @@ process(){
             echo -e "DEBUG <cray artifacts create config-data $s3_manifest_key $manifest> failed with\n\n$result"
             exit 1
         else
-            echo "NOTICE Successfully created s3://$s3_manifest_path"
+            echo "INFO Successfully created s3://$s3_manifest_path"
             CATALOG_UPDATE=$(echo "$CATALOG_UPDATE" | jq ".component_versions.manifests += [\"$s3_manifest_path\"]");
         fi
     done
