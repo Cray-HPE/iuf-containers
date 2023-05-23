@@ -9,6 +9,7 @@ SLES_MIRROR="https://${SLES_REPO_USERNAME:-}${SLES_REPO_PASSWORD+:}${SLES_REPO_P
 ARCH=x86_64
 zypper --non-interactive rr --all
 zypper --non-interactive ar ${SLES_MIRROR}/Products/SLE-Module-Basesystem/15-SP3/${ARCH}/product?auth=basic sles15sp3-Module-Basesystem-product
+zypper --non-interactive ar ${SLES_MIRROR}/Updates/SLE-Module-Containers/15-SP4/${ARCH}/update?auth=basic sles15sp4-Module-Containers-update
 zypper --non-interactive ar --no-gpgcheck ${CSM_RPMS_HPE_STABLE}/sle-15sp2/?auth=basic CSM-SLE-15SP2
 zypper --non-interactive ar --no-gpgcheck ${CSM_RPMS_HPE_STABLE}/sle-15sp3/?auth=basic CSM-SLE-15SP3
 zypper update -y
