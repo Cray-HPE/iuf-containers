@@ -34,7 +34,7 @@ jobs:
     env:
       DOCKER_REPO: artifactory.algol60.net/csm-docker/stable/iuf
       DOCKER_TAG: v0.1.8
-      DOCKER_ADDITIONAL_TAGS: artifactory.algol60.net/csm-docker/stable/iuf:latest
+      DOCKER_ADDITIONAL_TAGS: artifactory.algol60.net/csm-docker/stable/iuf:csm-latest
     steps:
       - name: build-sign-scan
         uses: Cray-HPE/github-actions/build-sign-scan@main
