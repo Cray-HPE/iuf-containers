@@ -1,4 +1,27 @@
-This is container image created for IUF operations. The following tools are installed in this container image: manifestget, craycli, loftsman, git, and jq.
+# Overview
+
+This is container image created for IUF operations. The following tools are installed in this container image:
+
+- loftsman-manifest-upload
+- s3-upload
+
+# Dependencies
+
+Note that this container image requires the following dependencies but does not embed them:
+
+- craycli
+- loftsman
+- manifestgen
+- git
+- jq
+
+It is expected that all these dependencies will be mounted from host, and the $PATH inside the container will be appended to include
+the mounted host directory containing these dependencies, before using any of the tools provided within this container.
+
+Furthermore, note that the host's /usr/bin directory is already mounted as part of the [iufBase.template](https://github.com/Cray-HPE/cray-nls/blob/0597b3fb49c966d260fac173b82bd224a3467af3/src/api/argo-templates/base/iufBase.template.argo.yaml#L72),
+as well as appended to the PATH inside the container, so if you are writing an IUF operation that uses the iufBase.template, then you don't have to do anything.
+
+# Contributing
 
 When CONTRIBUTING, change the version in the `.version` file and change the version in `.github/workflows/iuf-container.yaml` DOCKER_TAG.
 These two versions should match.
