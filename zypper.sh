@@ -15,3 +15,4 @@ zypper --non-interactive ar --no-gpgcheck ${CSM_RPMS_HPE_STABLE}/sle-15sp3/?auth
 zypper update -y
 zypper install -y git-core jq curl
 zypper clean -a && zypper --non-interactive rr --all && rm -f /etc/zypp/repos.d/*
+
