@@ -33,7 +33,7 @@ jobs:
       id-token: write
     env:
       DOCKER_REPO: artifactory.algol60.net/csm-docker/stable/iuf
-      DOCKER_TAG: v0.1.10
+      DOCKER_TAG: v0.1.11
       DOCKER_ADDITIONAL_TAGS: artifactory.algol60.net/csm-docker/stable/iuf:csm-latest
     steps:
       - name: build-sign-scan
