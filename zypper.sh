@@ -16,3 +16,6 @@ zypper update -y
 zypper install -y craycli loftsman manifestgen git-core jq curl
 zypper clean -a && zypper --non-interactive rr --all && rm -f /etc/zypp/repos.d/*
 
+# install kubectl
+curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl"
+chmod +x ./kubectl && mv ./kubectl /usr/local/bin/kubectl
