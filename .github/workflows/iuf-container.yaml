@@ -1,7 +1,7 @@
 #
 # MIT License
 #
-# (C) Copyright 2021-2024 Hewlett Packard Enterprise Development LP
+# (C) Copyright 2021-2025 Hewlett Packard Enterprise Development LP
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -33,7 +33,7 @@ jobs:
       id-token: write
     env:
       DOCKER_REPO: artifactory.algol60.net/csm-docker/${{ github.ref == 'refs/heads/main' && 'stable' || 'unstable' }}/iuf
-      DOCKER_TAG: v0.1.12
+      DOCKER_TAG: v0.1.13
     steps:
       - name: build-sign-scan
         uses: Cray-HPE/github-actions/build-sign-scan@build-sign-scan/v2
