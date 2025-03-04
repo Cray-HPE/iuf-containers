@@ -32,7 +32,7 @@ jobs:
       contents: read
       id-token: write
     env:
-      DOCKER_REPO: artifactory.algol60.net/csm-docker/${{ github.ref == 'refs/heads/main' && 'stable' || 'unstable' }}/iuf
+      DOCKER_REPO: artifactory.algol60.net/csm-docker/${{ github.ref_type == 'tag' && 'stable' || 'unstable' }}/iuf
       DOCKER_TAG: v0.1.13
     steps:
       - name: build-sign-scan
